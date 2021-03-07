@@ -52,20 +52,20 @@ func updateGateway(message types.TtnMapperUplinkMessage, gateway types.TtnMapper
 
 	var boundsChanged = false
 	// Latitude
-	if gatewayDbBbox.LatitudeMaximum < message.Latitude {
+	if gatewayDbBbox.LatitudeMaximum == 0 || gatewayDbBbox.LatitudeMaximum < message.Latitude {
 		boundsChanged = true
 		gatewayDbBbox.LatitudeMaximum = message.Latitude
 	}
-	if gatewayDbBbox.LatitudeMinimum < message.Latitude {
+	if gatewayDbBbox.LatitudeMinimum == 0 || gatewayDbBbox.LatitudeMinimum < message.Latitude {
 		boundsChanged = true
 		gatewayDbBbox.LatitudeMinimum = message.Latitude
 	}
 	// Longitude
-	if gatewayDbBbox.LongitudeMaximum < message.Longitude {
+	if gatewayDbBbox.LongitudeMaximum == 0 || gatewayDbBbox.LongitudeMaximum < message.Longitude {
 		boundsChanged = true
 		gatewayDbBbox.LongitudeMaximum = message.Longitude
 	}
-	if gatewayDbBbox.LongitudeMinimum < message.Longitude {
+	if gatewayDbBbox.LongitudeMinimum == 0 || gatewayDbBbox.LongitudeMinimum < message.Longitude {
 		boundsChanged = true
 		gatewayDbBbox.LongitudeMinimum = message.Longitude
 	}
