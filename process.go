@@ -19,6 +19,11 @@ func processMessages() {
 			continue
 		}
 
+		// Ignore messages without location
+		if message.Latitude == 0 && message.Longitude == 0 {
+			continue
+		}
+
 		// Iterate gateways. We store it flat in the database
 		for _, gateway := range message.Gateways {
 			updateTime := time.Unix(0, message.Time)
