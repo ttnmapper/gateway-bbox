@@ -153,7 +153,11 @@ func ReprocessSingleGateway(networkId string, gatewayId string) {
 	result.NetworkId = networkId
 	result.GatewayId = gatewayId
 
-	db.Clauses(clause.OnConflict{
-		UpdateAll: true,
-	}).Create(&result)
+	if result.LatitudeMaximum == 0 && result.LatitudeMinimum == 0 && result.LongitudeMinimum == 0 && result.LongitudeMaximum == 0 {
+		log.Println("Bounds zero, not updating")
+	} else {
+		db.Clauses(clause.OnConflict{
+			UpdateAll: true,
+		}).Create(&result)
+	}
 }
