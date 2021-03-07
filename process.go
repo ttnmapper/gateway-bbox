@@ -35,9 +35,6 @@ func processMessages() {
 			gateway.Longitude = 0
 			gateway.Altitude = 0
 
-			// Use originating network as id. TODO: use gateway network reported by packetbroker
-			gateway.NetworkId = message.NetworkType + "://" + message.NetworkAddress
-
 			updateGateway(message, gateway)
 		}
 	}
