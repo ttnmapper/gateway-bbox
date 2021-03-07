@@ -66,6 +66,7 @@ func updateGateway(message types.TtnMapperUplinkMessage, gateway types.TtnMapper
 	}
 
 	if boundsChanged {
+		log.Println("Bounding box grew")
 		db.Save(&gatewayDbBbox)
 	}
 }
