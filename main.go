@@ -117,8 +117,8 @@ func ReprocessAll() {
 	var gateways []types.Gateway
 	db.Find(&gateways)
 
-	for _, gateway := range gateways {
-		log.Println(gateway.NetworkId, " - ", gateway.GatewayId)
+	for i, gateway := range gateways {
+		log.Println(i, "/", len(gateways), " ", gateway.NetworkId, " - ", gateway.GatewayId)
 		ReprocessSingleGateway(gateway.NetworkId, gateway.GatewayId)
 	}
 }
@@ -129,8 +129,8 @@ func ReprocessGateways(gateways []string) {
 		var gateways []types.Gateway
 		db.Where("gateway_id = ?", gatewayId).Find(&gateways)
 
-		for _, gateway := range gateways {
-			log.Println(gateway.NetworkId, " - ", gateway.GatewayId)
+		for i, gateway := range gateways {
+			log.Println(i, "/", len(gateways), " ", gateway.NetworkId, " - ", gateway.GatewayId)
 			ReprocessSingleGateway(gateway.NetworkId, gateway.GatewayId)
 		}
 	}
