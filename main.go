@@ -66,7 +66,7 @@ func main() {
 
 	log.Printf("[Configuration]\n%s\n", utils.PrettyPrint(myConfiguration)) // output: [UserA, UserB]
 
-	var gormLogLevel = logger.Error
+	var gormLogLevel = logger.Silent
 	if myConfiguration.PostgresDebugLog {
 		log.Println("Database debug logging enabled")
 		gormLogLevel = logger.Info

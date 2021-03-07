@@ -22,7 +22,7 @@ func processMessages() {
 		// Iterate gateways. We store it flat in the database
 		for _, gateway := range message.Gateways {
 			updateTime := time.Unix(0, message.Time)
-			log.Print("AMQP ", "", "\t", gateway.GatewayId+"\t", updateTime)
+			log.Print(message.NetworkType, "\t", message.NetworkAddress, "\t", gateway.GatewayId, "\t", updateTime)
 			gateway.Time = message.Time
 
 			// Ignore locations obtained from live data
@@ -30,8 +30,8 @@ func processMessages() {
 			gateway.Longitude = 0
 			gateway.Altitude = 0
 
-			// Packet broker metadata will provide network id. For now assume TTN
-			//gateway.NetworkId = "thethingsnetwork.org"
+			// Use originating network as id. TODO: use gateway network reported by packetbroker
+			gateway.NetworkId = message.NetworkType + "://" + message.NetworkAddress
 
 			updateGateway(message, gateway)
 		}
@@ -82,6 +82,7 @@ func getGatewayBboxDb(gateway types.TtnMapperGateway) (types.GatewayBoundingBox,
 		gatewayDb := types.GatewayBoundingBox{NetworkId: gateway.NetworkId, GatewayId: gateway.GatewayId}
 		db.Where(&gatewayDb).First(&gatewayDb)
 		if gatewayDb.ID == 0 {
+			log.Println("Gateway not found in database, creating")
 			err := db.FirstOrCreate(&gatewayDb, &gatewayDb).Error
 			if err != nil {
 				return gatewayDb, err
