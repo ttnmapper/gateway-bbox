@@ -118,6 +118,7 @@ func ReprocessAll() {
 	db.Find(&gateways)
 
 	for _, gateway := range gateways {
+		log.Println(gateway.NetworkId, " - ", gateway.GatewayId)
 		ReprocessSingleGateway(gateway.NetworkId, gateway.GatewayId)
 	}
 }
