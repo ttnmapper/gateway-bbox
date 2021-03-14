@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"math"
 	"time"
 	"ttnmapper-gw-bbox/types"
 	"ttnmapper-gw-bbox/utils"
@@ -19,8 +20,21 @@ func processMessages() {
 			continue
 		}
 
+		// Do not use experiment data for bounding box
+		if message.Experiment != "" {
+			continue
+		}
+
 		// Ignore messages without location
 		if message.Latitude == 0 && message.Longitude == 0 {
+			continue
+		}
+
+		// Coordinates need to be in valid range
+		if math.Abs(message.Latitude) > 90 {
+			continue
+		}
+		if math.Abs(message.Longitude) > 180 {
 			continue
 		}
 

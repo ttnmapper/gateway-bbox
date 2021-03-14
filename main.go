@@ -145,10 +145,28 @@ func ReprocessSingleGateway(networkId string, gatewayId string) {
 		antennaIds = append(antennaIds, antenna.ID)
 	}
 
+	log.Println("Antenna IDs: ", antennaIds)
+
 	var result types.GatewayBoundingBox
-	db.Raw("SELECT max(latitude) as north, min(latitude) as south FROM packets WHERE antenna_id IN ? and latitude != 0", antennaIds).Scan(&result)
-	db.Raw("SELECT max(longitude) as east, min(longitude) as west FROM packets WHERE antenna_id IN ? and longitude != 0", antennaIds).Scan(&result)
-	log.Println(result)
+	db.Raw(`
+		SELECT max(latitude) as north, min(latitude) as south FROM
+		(
+		   SELECT *
+		   FROM packets
+		   WHERE antenna_id IN ?
+		) t
+		WHERE latitude != 0 AND experiment_id IS NULL
+	`, antennaIds).Scan(&result)
+	db.Raw(`
+		SELECT max(longitude) as east, min(longitude) as west FROM
+		(
+		   SELECT *
+		   FROM packets
+		   WHERE antenna_id IN ?
+		) t
+		WHERE longitude != 0 AND experiment_id IS NULL
+	`, antennaIds).Scan(&result)
+	log.Println(utils.PrettyPrint(result))
 
 	result.NetworkId = networkId
 	result.GatewayId = gatewayId
