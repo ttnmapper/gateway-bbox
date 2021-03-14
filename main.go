@@ -146,14 +146,14 @@ func ReprocessSingleGateway(networkId string, gatewayId string) {
 	}
 
 	var result types.GatewayBoundingBox
-	db.Raw("SELECT max(latitude) as latitude_maximum, min(latitude) as latitude_minimum FROM packets WHERE antenna_id IN ? and latitude != 0", antennaIds).Scan(&result)
-	db.Raw("SELECT max(longitude) as longitude_maximum, min(longitude) as longitude_minimum FROM packets WHERE antenna_id IN ? and longitude != 0", antennaIds).Scan(&result)
+	db.Raw("SELECT max(latitude) as north, min(latitude) as south FROM packets WHERE antenna_id IN ? and latitude != 0", antennaIds).Scan(&result)
+	db.Raw("SELECT max(longitude) as east, min(longitude) as west FROM packets WHERE antenna_id IN ? and longitude != 0", antennaIds).Scan(&result)
 	log.Println(result)
 
 	result.NetworkId = networkId
 	result.GatewayId = gatewayId
 
-	if result.LatitudeMaximum == 0 && result.LatitudeMinimum == 0 && result.LongitudeMinimum == 0 && result.LongitudeMaximum == 0 {
+	if result.North == 0 && result.South == 0 && result.East == 0 && result.West == 0 {
 		log.Println("Bounds zero, not updating")
 	} else {
 		db.Clauses(clause.OnConflict{
