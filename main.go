@@ -145,6 +145,10 @@ func ReprocessSingleGateway(networkId string, gatewayId string) {
 		antennaIds = append(antennaIds, antenna.ID)
 	}
 
+	if len(antennaIds) == 0 {
+		return
+	}
+
 	log.Println("Antenna IDs: ", antennaIds)
 
 	var result types.GatewayBoundingBox
