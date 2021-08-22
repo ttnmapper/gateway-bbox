@@ -159,6 +159,7 @@ func BuildQuerySQL(db *gorm.DB) {
 				}
 			}
 
+			db.Statement.Joins = nil
 			db.Statement.AddClause(clause.From{Joins: joins})
 		} else {
 			db.Statement.AddClauseIfNotExists(clause.From{})
@@ -166,7 +167,7 @@ func BuildQuerySQL(db *gorm.DB) {
 
 		db.Statement.AddClauseIfNotExists(clauseSelect)
 
-		db.Statement.Build("SELECT", "FROM", "WHERE", "GROUP BY", "ORDER BY", "LIMIT", "FOR")
+		db.Statement.Build(db.Statement.BuildClauses...)
 	}
 }
 
@@ -174,16 +175,20 @@ func Preload(db *gorm.DB) {
 	if db.Error == nil && len(db.Statement.Preloads) > 0 {
 		preloadMap := map[string]map[string][]interface{}{}
 		for name := range db.Statement.Preloads {
-			if name == clause.Associations {
+			preloadFields := strings.Split(name, ".")
+			if preloadFields[0] == clause.Associations {
 				for _, rel := range db.Statement.Schema.Relationships.Relations {
 					if rel.Schema == db.Statement.Schema {
 						if _, ok := preloadMap[rel.Name]; !ok {
 							preloadMap[rel.Name] = map[string][]interface{}{}
 						}
+
+						if value := strings.TrimPrefix(strings.TrimPrefix(name, preloadFields[0]), "."); value != "" {
+							preloadMap[rel.Name][value] = db.Statement.Preloads[name]
+						}
 					}
 				}
 			} else {
-				preloadFields := strings.Split(name, ".")
 				if _, ok := preloadMap[preloadFields[0]]; !ok {
 					preloadMap[preloadFields[0]] = map[string][]interface{}{}
 				}
@@ -204,7 +209,7 @@ func Preload(db *gorm.DB) {
 			if rel := db.Statement.Schema.Relationships.Relations[name]; rel != nil {
 				preload(db, rel, db.Statement.Preloads[name], preloadMap[name])
 			} else {
-				db.AddError(fmt.Errorf("%v: %w for schema %v", name, gorm.ErrUnsupportedRelation, db.Statement.Schema.Name))
+				db.AddError(fmt.Errorf("%s: %w for schema %s", name, gorm.ErrUnsupportedRelation, db.Statement.Schema.Name))
 			}
 		}
 	}

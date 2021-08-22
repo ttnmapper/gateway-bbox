@@ -288,12 +288,13 @@ func SaveAfterAssociations(create bool) func(db *gorm.DB) {
 					appendToElems(db.Statement.ReflectValue)
 				}
 
-				if elems.Len() > 0 {
+				// optimize elems of reflect value length
+				if elemLen := elems.Len(); elemLen > 0 {
 					if v, ok := selectColumns[rel.Name+".*"]; !ok || v {
 						saveAssociations(db, rel, elems.Interface(), selectColumns, restricted, nil)
 					}
 
-					for i := 0; i < elems.Len(); i++ {
+					for i := 0; i < elemLen; i++ {
 						appendToJoins(objs[i], elems.Index(i))
 					}
 				}
@@ -372,12 +373,12 @@ func saveAssociations(db *gorm.DB, rel *schema.Relationship, values interface{},
 	})
 
 	if tx.Statement.FullSaveAssociations {
-		tx = tx.InstanceSet("gorm:update_track_time", true)
+		tx = tx.Set("gorm:update_track_time", true)
 	}
 
 	if len(selects) > 0 {
 		tx = tx.Select(selects)
-	} else if len(selectColumns) > 0 && len(omits) == 0 {
+	} else if restricted && len(omits) == 0 {
 		tx = tx.Omit(clause.Associations)
 	}
 

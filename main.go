@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 	"log"
-	"sync"
 	"ttnmapper-gw-bbox/types"
 	"ttnmapper-gw-bbox/utils"
 )
@@ -52,7 +51,6 @@ var myConfiguration = Configuration{
 
 var db *gorm.DB
 var rawPacketsChannel = make(chan amqp.Delivery)
-var gatewayBboxCache sync.Map
 
 func main() {
 	reprocess := flag.Bool("reprocess", false, "a bool")
@@ -101,6 +99,7 @@ func main() {
 	} else {
 		// Start amqp listener on this thread - blocking function
 		log.Println("Starting AMQP thread")
+		// todo go subscribeToRabbitGatewayMoved()
 		go subscribeToRabbitRaw()
 		go processMessages()
 
@@ -119,7 +118,7 @@ func ReprocessAll() {
 
 	for i, gateway := range gateways {
 		log.Println(i, "/", len(gateways), " ", gateway.NetworkId, " - ", gateway.GatewayId)
-		ReprocessSingleGateway(gateway.NetworkId, gateway.GatewayId)
+		ReprocessSingleGateway(gateway)
 	}
 }
 
@@ -131,49 +130,74 @@ func ReprocessGateways(gateways []string) {
 
 		for i, gateway := range gateways {
 			log.Println(i, "/", len(gateways), " ", gateway.NetworkId, " - ", gateway.GatewayId)
-			ReprocessSingleGateway(gateway.NetworkId, gateway.GatewayId)
+			ReprocessSingleGateway(gateway)
 		}
 	}
 }
 
-func ReprocessSingleGateway(networkId string, gatewayId string) {
+func ReprocessSingleGateway(gateway types.Gateway) {
+	/*
+		1. Find all antennas with same network and gateway id
+		2. All packets for antennas find min and max lat and lon
+		3. Gateway location
+	*/
 	var antennas []types.Antenna
-	db.Where("network_id = ? and gateway_id = ?", networkId, gatewayId).Find(&antennas)
+	db.Where("network_id = ? and gateway_id = ?", gateway.NetworkId, gateway.GatewayId).Find(&antennas)
 
 	var antennaIds []uint
 	for _, antenna := range antennas {
 		antennaIds = append(antennaIds, antenna.ID)
 	}
 
-	if len(antennaIds) == 0 {
-		return
-	}
-
 	log.Println("Antenna IDs: ", antennaIds)
 
 	var result types.GatewayBoundingBox
-	db.Raw(`
-		SELECT max(latitude) as north, min(latitude) as south FROM
-		(
-		   SELECT *
-		   FROM packets
-		   WHERE antenna_id IN ?
-		) t
-		WHERE latitude != 0 AND experiment_id IS NULL
-	`, antennaIds).Scan(&result)
-	db.Raw(`
-		SELECT max(longitude) as east, min(longitude) as west FROM
-		(
-		   SELECT *
-		   FROM packets
-		   WHERE antenna_id IN ?
-		) t
-		WHERE longitude != 0 AND experiment_id IS NULL
-	`, antennaIds).Scan(&result)
-	log.Println(utils.PrettyPrint(result))
 
-	result.NetworkId = networkId
-	result.GatewayId = gatewayId
+	if len(antennaIds) > 0 {
+		db.Raw(`
+			SELECT max(latitude) as north, min(latitude) as south FROM
+			(
+			   SELECT *
+			   FROM packets
+			   WHERE antenna_id IN ?
+			) t
+			WHERE latitude != 0 AND experiment_id IS NULL
+		`, antennaIds).Scan(&result)
+		db.Raw(`
+			SELECT max(longitude) as east, min(longitude) as west FROM
+			(
+			   SELECT *
+			   FROM packets
+			   WHERE antenna_id IN ?
+			) t
+			WHERE longitude != 0 AND experiment_id IS NULL
+		`, antennaIds).Scan(&result)
+	}
+
+	// Take gateway location also into account
+	if gateway.Latitude == 0 && gateway.Longitude == 0 {
+		// Gateway location not set
+	} else {
+		log.Println("Gateway location:", gateway.Latitude, gateway.Longitude)
+
+		if result.North == 0 || gateway.Latitude > result.North {
+			result.North = gateway.Latitude
+		}
+		if result.South == 0 || gateway.Latitude < result.South {
+			result.South = gateway.Latitude
+		}
+		if result.East == 0 || gateway.Longitude > result.East {
+			result.East = gateway.Longitude
+		}
+		if result.West == 0 || gateway.Longitude < result.West {
+			result.West = gateway.Longitude
+		}
+
+		log.Println(utils.PrettyPrint(result))
+	}
+
+	result.NetworkId = gateway.NetworkId
+	result.GatewayId = gateway.GatewayId
 
 	if result.North == 0 && result.South == 0 && result.East == 0 && result.West == 0 {
 		log.Println("Bounds zero, not updating")
